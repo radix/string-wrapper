@@ -9,3 +9,13 @@ description = "A possibly-stack-allocated string with generic bytes storage"
 [lib]
 path = "lib.rs"
 doctest = false
+
+[features]
+use_serde = ["serde", "serde_derive"]
+
+[dev-dependencies]
+serde_json = "0.8"
+
+[dependencies]
+serde = {version = "0.8", optional = true}
+serde_derive = {version = "0.8", optional = true}
