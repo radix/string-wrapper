@@ -1,7 +1,7 @@
 # string_wrapper
 
-string_wrapper is a crate which provides a type, StringWrapper, which is a
-usually* stack-allocated UTF-8 string. This has a few consequences:
+string_wrapper is a crate which provides StringWrapper, which is a usually*
+stack-allocated UTF-8 string type. This has a few consequences:
 
 - Strings must be fixed-length so the size of the type can be known at
   compile-time.
