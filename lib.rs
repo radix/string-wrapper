@@ -1,3 +1,4 @@
+use std::borrow;
 use std::fmt;
 use std::io::Write;
 use std::mem::transmute;
@@ -187,6 +188,10 @@ impl<T> ops::DerefMut for StringWrapper<T> where T: Buffer {
             transmute::<&mut [u8], &mut str>(&mut self.buffer.as_mut()[..self.len])
         }
     }
+}
+
+impl<T> borrow::Borrow<str> for StringWrapper<T> where T: Buffer {
+    fn borrow(&self) -> &str { self }
 }
 
 impl<T> fmt::Display for StringWrapper<T> where T: Buffer {
