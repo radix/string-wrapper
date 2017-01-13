@@ -1,3 +1,4 @@
+use std::borrow;
 use std::fmt;
 use std::io::Write;
 use std::mem::transmute;
@@ -189,6 +190,10 @@ impl<T> ops::DerefMut for StringWrapper<T> where T: Buffer {
     }
 }
 
+impl<T> borrow::Borrow<str> for StringWrapper<T> where T: Buffer {
+    fn borrow(&self) -> &str { self }
+}
+
 impl<T> fmt::Display for StringWrapper<T> where T: Buffer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&**self, f)
@@ -203,7 +208,7 @@ impl<T> fmt::Debug for StringWrapper<T> where T: Buffer {
 
 impl<T: Buffer> PartialEq for StringWrapper<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.buffer.as_ref()[..self.len] == other.buffer.as_ref()[..self.len]
+        **self == **other
     }
 }
 
@@ -215,14 +220,13 @@ impl<T: Buffer> PartialOrd for StringWrapper<T> {
 
 impl<T: Buffer> hash::Hash for StringWrapper<T> {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        self.len.hash(state);
-        self.buffer.as_ref()[..self.len].hash(state);
+        (**self).hash(state)
     }
 }
 
 impl<T: Buffer + Eq> Ord for StringWrapper<T> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.buffer.as_ref()[..self.len].cmp(&other.buffer.as_ref()[..self.len])
+        (**self).cmp(&**other)
     }
 }
 
