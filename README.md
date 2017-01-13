@@ -20,7 +20,7 @@ First, add this to your `Cargo.toml`
 string-wrapper = "0.1.6"
 ```
 
-Make sure to use `extern crate` at your "crate root" module (usually either
+Make sure to use `extern crate` in your "crate root" module (usually either
 `lib.rs` or `main.rs`)
 
 ```rust
@@ -44,10 +44,13 @@ fn foo() {
 }
 ```
 
-Note that the type parameter MUST be a `[u8; N]` array. Possible sizes for `N`
-are listed here:
+Note that the type parameter MUST be made up of `u8`s, usually as a `[u8; N]`
+array, but `Vec<u8>` is also supported (though this means your string will be
+allocated on the heap). Possible array sizes for arrays are listed in the
+`Implementors` section of the `Buffer` trait documentation:
+https://docs.rs/string-wrapper/*/string_wrapper/trait.Buffer.html.
 
-Many other traits are supported by StringWrapper: see the
+Many other traits are supported by StringWrapper. See the
 [http://docs.rs/string-wrapper/](docs).
 
 # When is it useful?
@@ -63,3 +66,15 @@ Note that this is not what is typically called "SSO String", which is a
 dynamically-sized string that is either stored directly on the stack (if it's
 small) or on the heap (if it's long). Such a string would not be able to
 implement the Copy trait.
+
+# Credits
+
+Thanks to [@SimonSapin](https://github.com/SimonSapin/), the original author of
+this code.
+
+# LICENSE
+
+string-wrapper is dual-licensed under the [MIT
+license](https://opensource.org/licenses/MIT) and the [Apache 2.0
+license](https://opensource.org/licenses/Apache-2.0). All contributions must be
+made under the terms of both of these licenses.
