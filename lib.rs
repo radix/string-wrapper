@@ -19,7 +19,7 @@ pub struct StringWrapper<T>
     buffer: T,
 }
 
-/// Equivalent to `AsMut<[u8]> + AsRef<[u8]>` with the addition constraint that
+/// Equivalent to `AsMut<[u8]> + AsRef<[u8]>` with the additional constraint that
 /// implementations must return the same slice from subsequent calls of `as_mut` and/or `as_ref`.
 pub unsafe trait Buffer {
     fn as_ref(&self) -> &[u8];
