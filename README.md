@@ -77,6 +77,10 @@ implement the Copy trait.
 Thanks to [@SimonSapin](https://github.com/SimonSapin/), the original author of
 this code.
 
+Also:
+
+- [@mbrubeck](https://github.com/mbrubeck/)
+
 # LICENSE
 
 string-wrapper is dual-licensed under the [MIT
