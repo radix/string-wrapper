@@ -317,143 +317,150 @@ array_impl! {
     10_000_000 100_000_000 1_000_000_000
 }
 
-
-#[test]
-fn traits() {
-    // A simple way to ensure that Eq is implemented for StringWrapper
-    #[derive(Eq, PartialEq, Ord, PartialOrd)]
-    struct Foo {
-        x: StringWrapper<[u8; 32]>,
-    }
-}
-
-#[test]
-fn eq() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    assert_eq!(s, s);
-    s.push_str("foo");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
-    s2.push_str("foo");
-    assert_eq!(s, s2);
-
-    let mut s3 = StringWrapper::<[u8; 3]>::new(*b"000");
-    s3.push_str("bar");
-    assert!(s != s3);
-}
-
-#[test]
-fn eq_only_to_length() {
-    let a = StringWrapper::<[u8; 5]>::new(*b"aaaaa");
-    let b = StringWrapper::<[u8; 5]>::new(*b"bbbbb");
-    assert_eq!(a, b);
-}
-
-#[test]
-fn ord() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
-    s.push_str("a");
-    s2.push_str("b");
-    assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Less));
-    assert_eq!(s.cmp(&s2), cmp::Ordering::Less);
-}
-
-#[test]
-fn ord_only_to_length() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
-    assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
-    assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
-
-    s.push_str("aa");
-    s2.push_str("aa");
-    assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
-    assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
-}
-
 #[cfg(test)]
-fn hash<T: hash::Hash>(t: &T) -> u64 {
-    // who knows why this isn't in std
-    let mut h = std::collections::hash_map::DefaultHasher::new();
-    t.hash(&mut h);
-    hash::Hasher::finish(&h)
-}
+mod tests {
+    use std;
+    use std::cmp;
+    use std::hash;
+    use StringWrapper;
 
-#[test]
-fn hash_only_to_length() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
-    assert_eq!(hash(&s), hash(&s2));
-    s.push_str("a");
-    assert!(hash(&s) != hash(&s2));
-    s2.push_str("a");
-    assert_eq!(hash(&s), hash(&s2));
-}
+    #[test]
+    fn traits() {
+        // A simple way to ensure that Eq is implemented for StringWrapper
+        #[derive(Eq, PartialEq, Ord, PartialOrd)]
+        struct Foo {
+            x: StringWrapper<[u8; 32]>,
+        }
+    }
 
-#[test]
-fn it_works() {
-    let mut s = StringWrapper::new([0; 10]);
-    assert_eq!(&*s, "");
-    assert_eq!(s.len(), 0);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 10);
+    #[test]
+    fn eq() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        assert_eq!(s, s);
+        s.push_str("foo");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
+        s2.push_str("foo");
+        assert_eq!(s, s2);
 
-    assert_eq!(&*s, "");
-    assert_eq!(s.len(), 0);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 10);
+        let mut s3 = StringWrapper::<[u8; 3]>::new(*b"000");
+        s3.push_str("bar");
+        assert!(s != s3);
+    }
 
-    s.push_str("a");
-    assert_eq!(&*s, "a");
-    assert_eq!(s.len(), 1);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 9);
+    #[test]
+    fn eq_only_to_length() {
+        let a = StringWrapper::<[u8; 5]>::new(*b"aaaaa");
+        let b = StringWrapper::<[u8; 5]>::new(*b"bbbbb");
+        assert_eq!(a, b);
+    }
 
-    assert_eq!(s.push('é'), Ok(()));
-    assert_eq!(&*s, "aé");
-    assert_eq!(s.len(), 3);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 7);
+    #[test]
+    fn ord() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
+        s.push_str("a");
+        s2.push_str("b");
+        assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Less));
+        assert_eq!(s.cmp(&s2), cmp::Ordering::Less);
+    }
 
-    assert_eq!(s.push_partial_str("~~~"), Ok(()));
-    assert_eq!(&*s, "aé~~~");
-    assert_eq!(s.len(), 6);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 4);
+    #[test]
+    fn ord_only_to_length() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
+        assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
+        assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
 
-    assert_eq!(s.push_partial_str("hello"), Err(4));
-    assert_eq!(&*s, "aé~~~hell");
-    assert_eq!(s.len(), 10);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 0);
+        s.push_str("aa");
+        s2.push_str("aa");
+        assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
+        assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
+    }
 
-    s.truncate(6);
-    assert_eq!(&*s, "aé~~~");
-    assert_eq!(s.len(), 6);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 4);
+    #[cfg(test)]
+    fn hash<T: hash::Hash>(t: &T) -> u64 {
+        // who knows why this isn't in std
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        t.hash(&mut h);
+        hash::Hasher::finish(&h)
+    }
 
-    assert_eq!(s.push_partial_str("_🌠"), Err(1));
-    assert_eq!(&*s, "aé~~~_");
-    assert_eq!(s.len(), 7);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 3);
+    #[test]
+    fn hash_only_to_length() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
+        assert_eq!(hash(&s), hash(&s2));
+        s.push_str("a");
+        assert!(hash(&s) != hash(&s2));
+        s2.push_str("a");
+        assert_eq!(hash(&s), hash(&s2));
+    }
 
-    assert_eq!(s.push('🌠'), Err(()));
-    assert_eq!(&*s, "aé~~~_");
-    assert_eq!(s.len(), 7);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 3);
+    #[test]
+    fn it_works() {
+        let mut s = StringWrapper::new([0; 10]);
+        assert_eq!(&*s, "");
+        assert_eq!(s.len(), 0);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 10);
+
+        assert_eq!(&*s, "");
+        assert_eq!(s.len(), 0);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 10);
+
+        s.push_str("a");
+        assert_eq!(&*s, "a");
+        assert_eq!(s.len(), 1);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 9);
+
+        assert_eq!(s.push('é'), Ok(()));
+        assert_eq!(&*s, "aé");
+        assert_eq!(s.len(), 3);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 7);
+
+        assert_eq!(s.push_partial_str("~~~"), Ok(()));
+        assert_eq!(&*s, "aé~~~");
+        assert_eq!(s.len(), 6);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 4);
+
+        assert_eq!(s.push_partial_str("hello"), Err(4));
+        assert_eq!(&*s, "aé~~~hell");
+        assert_eq!(s.len(), 10);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 0);
+
+        s.truncate(6);
+        assert_eq!(&*s, "aé~~~");
+        assert_eq!(s.len(), 6);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 4);
+
+        assert_eq!(s.push_partial_str("_🌠"), Err(1));
+        assert_eq!(&*s, "aé~~~_");
+        assert_eq!(s.len(), 7);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 3);
+
+        assert_eq!(s.push('🌠'), Err(()));
+        assert_eq!(&*s, "aé~~~_");
+        assert_eq!(s.len(), 7);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 3);
 
 
-    let buffer: [u8; 10] = s.clone().into_buffer();
-    assert_eq!(&buffer, b"a\xC3\xA9~~~_ell");
-    assert_eq!(format!("{}", s), "aé~~~_");
-    assert_eq!(format!("{:?}", s), r#""aé~~~_""#);
+        let buffer: [u8; 10] = s.clone().into_buffer();
+        assert_eq!(&buffer, b"a\xC3\xA9~~~_ell");
+        assert_eq!(format!("{}", s), "aé~~~_");
+        assert_eq!(format!("{:?}", s), r#""aé~~~_""#);
 
-    assert_eq!(s.push_partial_str("ô!?"), Err(3));
-    assert_eq!(&*s, "aé~~~_ô!");
-    assert_eq!(s.len(), 10);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 0);
+        assert_eq!(s.push_partial_str("ô!?"), Err(3));
+        assert_eq!(&*s, "aé~~~_ô!");
+        assert_eq!(s.len(), 10);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 0);
+    }
 }
