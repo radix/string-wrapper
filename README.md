@@ -13,7 +13,8 @@ Docs are at http://docs.rs/string-wrapper
 
 # Example
 
-First, add this to your `Cargo.toml`
+First, add this to your `Cargo.toml` (0.1.6 is not yet released, but it will be
+soon).
 
 ```toml
 [dependencies]
