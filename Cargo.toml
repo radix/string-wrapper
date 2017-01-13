@@ -1,10 +1,10 @@
 [package]
 name = "string-wrapper"
-version = "0.1.5"
-authors = ["Simon Sapin <simon.sapin@exyr.org>"]
+version = "0.1.6"
+authors = ["Christopher Armstrong <radix@twistedmatrix.com>"]
 license = "MIT / Apache-2.0"
-repository = "https://github.com/SimonSapin/rust-std-candidates"
-description = "A String with generic bytes storage"
+repository = "https://github.com/radix/string-wrapper"
+description = "A stack-allocated string with generic bytes storage"
 
 [lib]
 path = "lib.rs"

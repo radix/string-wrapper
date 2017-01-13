@@ -9,7 +9,7 @@ stack-allocated UTF-8 string. This has a few consequences:
 
 # Documentation
 
-Docs are at [http://docs.rs/string-wrapper]
+Docs are at http://docs.rs/string-wrapper
 
 # Example
 
@@ -43,6 +43,9 @@ fn foo() {
   println!("{}", s);
 }
 ```
+
+Note that the type parameter MUST be a `[u8; N]` array. Possible sizes for `N`
+are listed here:
 
 Many other traits are supported by StringWrapper: see the
 [http://docs.rs/string-wrapper/](docs).
