@@ -1,11 +1,11 @@
-# string_wrapper, a stack-allocated fixed-length string type
+# string_wrapper
 
 string_wrapper is a crate which provides a type, StringWrapper, which is a
-stack-allocated UTF-8 string. This has a few consequences:
+usually* stack-allocated UTF-8 string. This has a few consequences:
 
 - Strings must be fixed-length so the size of the type can be known at
-  compile-time
-- It can implement Clone, unlike the standard heap-allocated String type.
+  compile-time.
+- It can implement Copy, unlike the standard heap-allocated String type.
 
 # Documentation
 
@@ -44,14 +44,18 @@ fn foo() {
 }
 ```
 
-Note that the type parameter MUST be made up of `u8`s, usually as a `[u8; N]`
-array, but `Vec<u8>` is also supported (though this means your string will be
-allocated on the heap). Possible array sizes for arrays are listed in the
+Note that the type parameter MUST be made up of `u8`s, usually* as a `[u8; N]`
+array. Possible array sizes for arrays are listed in the
 `Implementors` section of the `Buffer` trait documentation:
 https://docs.rs/string-wrapper/*/string_wrapper/trait.Buffer.html.
 
 Many other traits are supported by StringWrapper. See the
 [http://docs.rs/string-wrapper/](docs).
+
+# "Usually*"? Heap-allocated StringWrappers
+
+`Vec<u8>` is also supported as a backing buffer instead of `[u8; N]`. Using a
+`Vec<u8>` means your string will be on the heap.
 
 # When is it useful?
 
