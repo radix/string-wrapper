@@ -7,10 +7,6 @@ matrix:
     - rust: stable
       env: # Drop this once stable >= 1.15!
         - NOSERDE=1
-rust:
-  - nightly
-  - beta
-  - stable
 script:
   - cargo test
   - ([ "$NOSERDE" == 1 ] || cargo test --features use_serde)
