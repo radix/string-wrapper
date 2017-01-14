@@ -16,16 +16,15 @@ Docs are at http://docs.rs/string-wrapper
 
 # Example
 
-First, add this to your `Cargo.toml` (0.1.6 is not yet released, but it will be
-soon).
+First, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 string-wrapper = "0.1.6"
 ```
 
-If you want to use serde support, you have to enable the feature and use Rust
-1.15 or higher.
+If you want to use [Serde](https://serde.rs/) support, you have to enable the
+`use_serde` feature and use Rust 1.15 or higher.
 
 ```toml
 [dependencies]

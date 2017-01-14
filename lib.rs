@@ -20,7 +20,7 @@ extern crate serde;
 /// Like `String`, but with a fixed capacity and a generic backing bytes storage.
 ///
 /// Use e.g. `StringWrapper<[u8; 4]>` to have a string without heap memory allocation.
-#[derive(Eq, Clone, Copy, Default)]
+#[derive(Copy, Default)]
 pub struct StringWrapper<T>
     where T: Buffer
 {
@@ -271,6 +271,19 @@ impl<T: Buffer> PartialEq for StringWrapper<T> {
     }
 }
 
+// We need to explicitly define Eq here, because the derive logic only impls it when T is also Eq.
+impl<T: Buffer> Eq for StringWrapper<T> {}
+
+// Likewise we need to implement Clone explicitly because std doesn't define it for arrays bigger
+// than 32 elements. We rely on cloning the slice of the array and then copying that into a new
+// buffer, which requires OwnedBuffer::new.
+impl<T: Buffer + Copy> Clone for StringWrapper<T> {
+    fn clone(&self) -> Self {
+        *self
+
+    }
+}
+
 impl<T: Buffer> PartialOrd for StringWrapper<T> {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
@@ -283,7 +296,7 @@ impl<T: Buffer> hash::Hash for StringWrapper<T> {
     }
 }
 
-impl<T: Buffer + Eq> Ord for StringWrapper<T> {
+impl<T: Buffer> Ord for StringWrapper<T> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         (**self).cmp(&**other)
     }
@@ -402,7 +415,7 @@ mod tests {
         // A simple way to ensure that Eq is implemented for StringWrapper
         #[derive(Eq, PartialEq, Ord, PartialOrd)]
         struct Foo {
-            x: StringWrapper<[u8; 32]>,
+            x: StringWrapper<[u8; 64]>,
         }
     }
 
@@ -460,8 +473,8 @@ mod tests {
 
     #[test]
     fn hash_only_to_length() {
-        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
+        let mut s = StringWrapper::<[u8; 64]>::new([0u8; 64]);
+        let mut s2 = StringWrapper::<[u8; 64]>::new([1u8; 64]);
         assert_eq!(hash(&s), hash(&s2));
         s.push_str("a");
         assert!(hash(&s) != hash(&s2));
@@ -471,8 +484,8 @@ mod tests {
 
     #[test]
     fn from_str() {
-        let s: StringWrapper<[u8; 32]> = StringWrapper::from_str("OMG!");
-        let mut s2 = StringWrapper::new([0u8; 32]);
+        let s: StringWrapper<[u8; 64]> = StringWrapper::from_str("OMG!");
+        let mut s2 = StringWrapper::new([0u8; 64]);
         s2.push_str("OMG!");
         assert_eq!(s, s2);
     }
@@ -548,11 +561,18 @@ mod tests {
     #[cfg(feature="use_serde")]
     #[test]
     fn test_serde() {
-        let mut s = StringWrapper::new([0u8; 10]);
+        let mut s = StringWrapper::new([0u8; 64]);
         s.push_str("foobar");
         let json = serde_json::to_string(&s).unwrap();
         assert_eq!(json, "\"foobar\"");
         let s2 = serde_json::from_str(&json).unwrap();
         assert_eq!(s, s2);
+    }
+
+    #[test]
+    fn clone() {
+        let s = StringWrapper::new([0u8; 64]);
+        let y: StringWrapper<[u8; 64]> = s.clone();
+        println!("s: {}, y: {}", s, y);
     }
 }
