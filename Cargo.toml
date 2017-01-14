@@ -4,7 +4,10 @@ version = "0.1.6"
 authors = ["Christopher Armstrong <radix@twistedmatrix.com>"]
 license = "MIT / Apache-2.0"
 repository = "https://github.com/radix/string-wrapper"
+documentation = "https://docs.rs/string-wrapper"
 description = "A possibly-stack-allocated string with generic bytes storage"
+readme = "README.md"
+keywords = ["string", "data-structures"]
 
 [lib]
 path = "lib.rs"
