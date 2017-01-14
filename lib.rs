@@ -183,17 +183,17 @@ impl<T: OwnedBuffer> StringWrapper<T> {
     /// Copy a `&str` into a new `StringWrapper`. You may need to annotate the type of this call so
     /// Rust knows which size of array you want to populate:
     ///
-    /// #Panics
+    /// # Panics
     ///
     /// Panics if the `&str` cannot fit into the buffer.
     ///
-    /// #Examples
+    /// # Examples
     ///
     /// ```
     /// use string_wrapper::StringWrapper;
     ///
     /// let sw: StringWrapper<[u8; 32]> = StringWrapper::from_str("hello, world");
-    /// assert_eq!(format!("{}", sw), "hello, world!");
+    /// assert_eq!(format!("{}", sw), "hello, world");
     /// ```
 
     pub fn from_str(s: &str) -> StringWrapper<T> {

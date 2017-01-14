@@ -8,7 +8,6 @@ description = "A possibly-stack-allocated string with generic bytes storage"
 
 [lib]
 path = "lib.rs"
-doctest = false
 
 [features]
 use_serde = ["serde", "serde_derive"]
