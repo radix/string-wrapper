@@ -8,5 +8,7 @@ matrix:
       env: # Drop this once stable >= 1.15!
         - NOSERDE=1
 script:
+  - cargo build
   - cargo test
+  - ([ "$NOSERDE" == 1 ] || cargo build --features use_serde)
   - ([ "$NOSERDE" == 1 ] || cargo test --features use_serde)
