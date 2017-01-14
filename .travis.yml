@@ -1,9 +1,16 @@
 sudo: false
 language: rust
+matrix:
+  include:
+    - rust: nightly
+    - rust: beta
+    - rust: stable
+      env: # Drop this once stable >= 1.15!
+        - NOSERDE=1
 rust:
   - nightly
   - beta
   - stable
 script:
   - cargo test
-  - cargo test --features use_serde
+  - ([ "$NOSERDE" == 1 ] || cargo test --features use_serde)

@@ -22,7 +22,8 @@ soon).
 string-wrapper = "0.1.6"
 ```
 
-If you want to use serde support, you have to enable the feature:
+If you want to use serde support, you have to enable the feature and use Rust
+1.15 or higher.
 
 ```toml
 [dependencies]
