@@ -1,3 +1,5 @@
+//! provides `StringWrapper`, most useful for stack-based strings.
+
 #![deny(missing_docs)]
 use std::borrow;
 use std::fmt;
@@ -29,7 +31,9 @@ pub struct StringWrapper<T>
 /// Equivalent to `AsMut<[u8]> + AsRef<[u8]>` with the additional constraint that
 /// implementations must return the same slice from subsequent calls of `as_mut` and/or `as_ref`.
 pub unsafe trait Buffer {
+    /// Get the backing buffer as a slice.
     fn as_ref(&self) -> &[u8];
+    /// Get the backing buffer as a mutable slice.
     fn as_mut(&mut self) -> &mut [u8];
 }
 
@@ -176,6 +180,22 @@ impl<T> StringWrapper<T>
 }
 
 impl<T: OwnedBuffer> StringWrapper<T> {
+    /// Copy a `&str` into a new `StringWrapper`. You may need to annotate the type of this call so
+    /// Rust knows which size of array you want to populate:
+    ///
+    /// #Panics
+    ///
+    /// Panics if the `&str` cannot fit into the buffer.
+    ///
+    /// #Examples
+    ///
+    /// ```
+    /// use string_wrapper::StringWrapper;
+    ///
+    /// let sw: StringWrapper<[u8; 32]> = StringWrapper::from_str("hello, world");
+    /// assert_eq!(format!("{}", sw), "hello, world!");
+    /// ```
+
     pub fn from_str(s: &str) -> StringWrapper<T> {
         let buffer = T::new();
         let mut sw = StringWrapper::new(buffer);
