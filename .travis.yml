@@ -4,4 +4,6 @@ rust:
   - nightly
   - beta
   - stable
-script: cargo test
+script:
+  - cargo test
+  - cargo test --features use_serde
