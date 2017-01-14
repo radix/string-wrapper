@@ -43,9 +43,7 @@ Finally, to actually use the StringWrapper type:
 use string_wrapper::StringWrapper;
 
 fn foo() {
-  // s is of type StringWrapper<[u8; 32]>
-  let mut s = StringWrapper::new([0u8; 32]);
-  s.push_str("foo");
+  let s: StringWrapper<[u8; 32]> = StringWrapper::from_str("foo");;
 
   // a StringWrapper can be converted back to a String with `to_string`:
   println!("{}", s.to_string());

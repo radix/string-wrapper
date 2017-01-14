@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 use std::borrow;
 use std::fmt;
 use std::io::Write;
@@ -34,6 +35,7 @@ pub unsafe trait Buffer {
 
 /// The OwnedBuffer trait is in support of StringWrapper::from_str, since we need to be able to
 /// allocate new buffers for it.
+///
 /// IMPLEMENTATION NOTE: There is currently no impl for Vec<u8>, because StringWrapper assumes a
 /// fixed capacity, and we don't have a way to know what size vec we should return.
 // Besides, I'm not sure what the value of Buffer for Vec is anyway, when you could just use
