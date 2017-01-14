@@ -1,3 +1,5 @@
+[![Build Status](https://api.travis-ci.org/radix/string-wrapper.svg?branch=master)](https://travis-ci.org/radix/string-wrapper) [![Latest Version](https://img.shields.io/crates/v/string-wrapper.svg)](https://crates.io/crates/string-wrapper)
+
 # string_wrapper
 
 string_wrapper is a crate which provides StringWrapper, which is a usually*
