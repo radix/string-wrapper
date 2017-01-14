@@ -8,6 +8,12 @@ use std::str;
 use std::cmp;
 use std::hash;
 
+#[cfg(feature="use_serde")]
+#[macro_use]
+extern crate serde_derive;
+#[cfg(feature="use_serde")]
+extern crate serde;
+
 /// Like `String`, but with a fixed capacity and a generic backing bytes storage.
 ///
 /// Use e.g. `StringWrapper<[u8; 4]>` to have a string without heap memory allocation.
@@ -24,6 +30,17 @@ pub struct StringWrapper<T>
 pub unsafe trait Buffer {
     fn as_ref(&self) -> &[u8];
     fn as_mut(&mut self) -> &mut [u8];
+}
+
+/// The OwnedBuffer trait is in support of StringWrapper::from_str, since we need to be able to
+/// allocate new buffers for it.
+/// IMPLEMENTATION NOTE: There is currently no impl for Vec<u8>, because StringWrapper assumes a
+/// fixed capacity, and we don't have a way to know what size vec we should return.
+// Besides, I'm not sure what the value of Buffer for Vec is anyway, when you could just use
+// String...
+pub trait OwnedBuffer: Buffer {
+    /// Creature a new buffer that can be used to initialize a StringWrapper.
+    fn new() -> Self;
 }
 
 impl<T> StringWrapper<T>
@@ -155,6 +172,16 @@ impl<T> StringWrapper<T>
         result
     }
 }
+
+impl<T: OwnedBuffer> StringWrapper<T> {
+    pub fn from_str(s: &str) -> StringWrapper<T> {
+        let buffer = T::new();
+        let mut sw = StringWrapper::new(buffer);
+        sw.push_str(s);
+        sw
+    }
+}
+
 fn starts_well_formed_utf8_sequence(byte: u8) -> bool {
     // ASCII byte or "leading" byte
     byte < 128 || byte >= 192
@@ -240,6 +267,22 @@ impl<T: Buffer + Eq> Ord for StringWrapper<T> {
     }
 }
 
+#[cfg(feature="use_serde")]
+impl<T: Buffer> serde::Serialize for StringWrapper<T> {
+    fn serialize<S: serde::Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
+        self.to_string().serialize(serializer)
+    }
+}
+
+#[cfg(feature="use_serde")]
+impl<T: OwnedBuffer> serde::Deserialize for StringWrapper<T> {
+    fn deserialize<D: serde::Deserializer>(deserializer: &mut D) -> Result<Self, D::Error> {
+        let s: String = serde::Deserialize::deserialize(deserializer)?;
+        let sb = StringWrapper::from_str(&s);
+        Ok(sb)
+    }
+}
+
 unsafe impl<'a, T: ?Sized + Buffer> Buffer for &'a mut T {
     fn as_ref(&self) -> &[u8] {
         (**self).as_ref()
@@ -283,6 +326,10 @@ macro_rules! array_impl {
                 fn as_ref(&self) -> &[u8] { self }
                 fn as_mut(&mut self) -> &mut [u8] { self }
             }
+
+            impl OwnedBuffer for [u8; $N] {
+                fn new() -> Self { [0u8; $N] }
+            }
         )+
     }
 }
@@ -322,6 +369,10 @@ mod tests {
     use std;
     use std::cmp;
     use std::hash;
+
+    #[cfg(feature="use_serde")]
+    extern crate serde_json;
+
     use StringWrapper;
 
     #[test]
@@ -397,6 +448,14 @@ mod tests {
     }
 
     #[test]
+    fn from_str() {
+        let s: StringWrapper<[u8; 32]> = StringWrapper::from_str("OMG!");
+        let mut s2 = StringWrapper::new([0u8; 32]);
+        s2.push_str("OMG!");
+        assert_eq!(s, s2);
+    }
+
+    #[test]
     fn it_works() {
         let mut s = StringWrapper::new([0; 10]);
         assert_eq!(&*s, "");
@@ -462,5 +521,16 @@ mod tests {
         assert_eq!(s.len(), 10);
         assert_eq!(s.capacity(), 10);
         assert_eq!(s.extra_capacity(), 0);
+    }
+
+    #[cfg(feature="use_serde")]
+    #[test]
+    fn test_serde() {
+        let mut s = StringWrapper::new([0u8; 10]);
+        s.push_str("foobar");
+        let json = serde_json::to_string(&s).unwrap();
+        assert_eq!(json, "\"foobar\"");
+        let s2 = serde_json::from_str(&json).unwrap();
+        assert_eq!(s, s2);
     }
 }
