@@ -1,3 +1,6 @@
+//! provides `StringWrapper`, most useful for stack-based strings.
+
+#![deny(missing_docs)]
 use std::borrow;
 use std::fmt;
 use std::io::Write;
@@ -7,6 +10,12 @@ use std::ptr;
 use std::str;
 use std::cmp;
 use std::hash;
+
+#[cfg(feature="use_serde")]
+#[macro_use]
+extern crate serde_derive;
+#[cfg(feature="use_serde")]
+extern crate serde;
 
 /// Like `String`, but with a fixed capacity and a generic backing bytes storage.
 ///
@@ -22,8 +31,22 @@ pub struct StringWrapper<T>
 /// Equivalent to `AsMut<[u8]> + AsRef<[u8]>` with the additional constraint that
 /// implementations must return the same slice from subsequent calls of `as_mut` and/or `as_ref`.
 pub unsafe trait Buffer {
+    /// Get the backing buffer as a slice.
     fn as_ref(&self) -> &[u8];
+    /// Get the backing buffer as a mutable slice.
     fn as_mut(&mut self) -> &mut [u8];
+}
+
+/// The OwnedBuffer trait is in support of StringWrapper::from_str, since we need to be able to
+/// allocate new buffers for it.
+///
+/// IMPLEMENTATION NOTE: There is currently no impl for Vec<u8>, because StringWrapper assumes a
+/// fixed capacity, and we don't have a way to know what size vec we should return.
+// Besides, I'm not sure what the value of Buffer for Vec is anyway, when you could just use
+// String...
+pub trait OwnedBuffer: Buffer {
+    /// Creature a new buffer that can be used to initialize a StringWrapper.
+    fn new() -> Self;
 }
 
 impl<T> StringWrapper<T>
@@ -155,6 +178,32 @@ impl<T> StringWrapper<T>
         result
     }
 }
+
+impl<T: OwnedBuffer> StringWrapper<T> {
+    /// Copy a `&str` into a new `StringWrapper`. You may need to annotate the type of this call so
+    /// Rust knows which size of array you want to populate:
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `&str` cannot fit into the buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use string_wrapper::StringWrapper;
+    ///
+    /// let sw: StringWrapper<[u8; 32]> = StringWrapper::from_str("hello, world");
+    /// assert_eq!(format!("{}", sw), "hello, world");
+    /// ```
+
+    pub fn from_str(s: &str) -> StringWrapper<T> {
+        let buffer = T::new();
+        let mut sw = StringWrapper::new(buffer);
+        sw.push_str(s);
+        sw
+    }
+}
+
 fn starts_well_formed_utf8_sequence(byte: u8) -> bool {
     // ASCII byte or "leading" byte
     byte < 128 || byte >= 192
@@ -240,6 +289,22 @@ impl<T: Buffer + Eq> Ord for StringWrapper<T> {
     }
 }
 
+#[cfg(feature="use_serde")]
+impl<T: Buffer> serde::Serialize for StringWrapper<T> {
+    fn serialize<S: serde::Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
+        self.to_string().serialize(serializer)
+    }
+}
+
+#[cfg(feature="use_serde")]
+impl<T: OwnedBuffer> serde::Deserialize for StringWrapper<T> {
+    fn deserialize<D: serde::Deserializer>(deserializer: &mut D) -> Result<Self, D::Error> {
+        let s: String = serde::Deserialize::deserialize(deserializer)?;
+        let sb = StringWrapper::from_str(&s);
+        Ok(sb)
+    }
+}
+
 unsafe impl<'a, T: ?Sized + Buffer> Buffer for &'a mut T {
     fn as_ref(&self) -> &[u8] {
         (**self).as_ref()
@@ -283,6 +348,10 @@ macro_rules! array_impl {
                 fn as_ref(&self) -> &[u8] { self }
                 fn as_mut(&mut self) -> &mut [u8] { self }
             }
+
+            impl OwnedBuffer for [u8; $N] {
+                fn new() -> Self { [0u8; $N] }
+            }
         )+
     }
 }
@@ -317,143 +386,173 @@ array_impl! {
     10_000_000 100_000_000 1_000_000_000
 }
 
-
-#[test]
-fn traits() {
-    // A simple way to ensure that Eq is implemented for StringWrapper
-    #[derive(Eq, PartialEq, Ord, PartialOrd)]
-    struct Foo {
-        x: StringWrapper<[u8; 32]>,
-    }
-}
-
-#[test]
-fn eq() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    assert_eq!(s, s);
-    s.push_str("foo");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
-    s2.push_str("foo");
-    assert_eq!(s, s2);
-
-    let mut s3 = StringWrapper::<[u8; 3]>::new(*b"000");
-    s3.push_str("bar");
-    assert!(s != s3);
-}
-
-#[test]
-fn eq_only_to_length() {
-    let a = StringWrapper::<[u8; 5]>::new(*b"aaaaa");
-    let b = StringWrapper::<[u8; 5]>::new(*b"bbbbb");
-    assert_eq!(a, b);
-}
-
-#[test]
-fn ord() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
-    s.push_str("a");
-    s2.push_str("b");
-    assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Less));
-    assert_eq!(s.cmp(&s2), cmp::Ordering::Less);
-}
-
-#[test]
-fn ord_only_to_length() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
-    assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
-    assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
-
-    s.push_str("aa");
-    s2.push_str("aa");
-    assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
-    assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
-}
-
 #[cfg(test)]
-fn hash<T: hash::Hash>(t: &T) -> u64 {
-    // who knows why this isn't in std
-    let mut h = std::collections::hash_map::DefaultHasher::new();
-    t.hash(&mut h);
-    hash::Hasher::finish(&h)
-}
+mod tests {
+    use std;
+    use std::cmp;
+    use std::hash;
 
-#[test]
-fn hash_only_to_length() {
-    let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
-    let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
-    assert_eq!(hash(&s), hash(&s2));
-    s.push_str("a");
-    assert!(hash(&s) != hash(&s2));
-    s2.push_str("a");
-    assert_eq!(hash(&s), hash(&s2));
-}
+    #[cfg(feature="use_serde")]
+    extern crate serde_json;
 
-#[test]
-fn it_works() {
-    let mut s = StringWrapper::new([0; 10]);
-    assert_eq!(&*s, "");
-    assert_eq!(s.len(), 0);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 10);
+    use StringWrapper;
 
-    assert_eq!(&*s, "");
-    assert_eq!(s.len(), 0);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 10);
+    #[test]
+    fn traits() {
+        // A simple way to ensure that Eq is implemented for StringWrapper
+        #[derive(Eq, PartialEq, Ord, PartialOrd)]
+        struct Foo {
+            x: StringWrapper<[u8; 32]>,
+        }
+    }
 
-    s.push_str("a");
-    assert_eq!(&*s, "a");
-    assert_eq!(s.len(), 1);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 9);
+    #[test]
+    fn eq() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        assert_eq!(s, s);
+        s.push_str("foo");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
+        s2.push_str("foo");
+        assert_eq!(s, s2);
 
-    assert_eq!(s.push('é'), Ok(()));
-    assert_eq!(&*s, "aé");
-    assert_eq!(s.len(), 3);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 7);
+        let mut s3 = StringWrapper::<[u8; 3]>::new(*b"000");
+        s3.push_str("bar");
+        assert!(s != s3);
+    }
 
-    assert_eq!(s.push_partial_str("~~~"), Ok(()));
-    assert_eq!(&*s, "aé~~~");
-    assert_eq!(s.len(), 6);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 4);
+    #[test]
+    fn eq_only_to_length() {
+        let a = StringWrapper::<[u8; 5]>::new(*b"aaaaa");
+        let b = StringWrapper::<[u8; 5]>::new(*b"bbbbb");
+        assert_eq!(a, b);
+    }
 
-    assert_eq!(s.push_partial_str("hello"), Err(4));
-    assert_eq!(&*s, "aé~~~hell");
-    assert_eq!(s.len(), 10);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 0);
+    #[test]
+    fn ord() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"000");
+        s.push_str("a");
+        s2.push_str("b");
+        assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Less));
+        assert_eq!(s.cmp(&s2), cmp::Ordering::Less);
+    }
 
-    s.truncate(6);
-    assert_eq!(&*s, "aé~~~");
-    assert_eq!(s.len(), 6);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 4);
+    #[test]
+    fn ord_only_to_length() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
+        assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
+        assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
 
-    assert_eq!(s.push_partial_str("_🌠"), Err(1));
-    assert_eq!(&*s, "aé~~~_");
-    assert_eq!(s.len(), 7);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 3);
+        s.push_str("aa");
+        s2.push_str("aa");
+        assert_eq!(s.partial_cmp(&s2), Some(cmp::Ordering::Equal));
+        assert_eq!(s.cmp(&s2), cmp::Ordering::Equal);
+    }
 
-    assert_eq!(s.push('🌠'), Err(()));
-    assert_eq!(&*s, "aé~~~_");
-    assert_eq!(s.len(), 7);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 3);
+    #[cfg(test)]
+    fn hash<T: hash::Hash>(t: &T) -> u64 {
+        // who knows why this isn't in std
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        t.hash(&mut h);
+        hash::Hasher::finish(&h)
+    }
+
+    #[test]
+    fn hash_only_to_length() {
+        let mut s = StringWrapper::<[u8; 3]>::new(*b"000");
+        let mut s2 = StringWrapper::<[u8; 3]>::new(*b"111");
+        assert_eq!(hash(&s), hash(&s2));
+        s.push_str("a");
+        assert!(hash(&s) != hash(&s2));
+        s2.push_str("a");
+        assert_eq!(hash(&s), hash(&s2));
+    }
+
+    #[test]
+    fn from_str() {
+        let s: StringWrapper<[u8; 32]> = StringWrapper::from_str("OMG!");
+        let mut s2 = StringWrapper::new([0u8; 32]);
+        s2.push_str("OMG!");
+        assert_eq!(s, s2);
+    }
+
+    #[test]
+    fn it_works() {
+        let mut s = StringWrapper::new([0; 10]);
+        assert_eq!(&*s, "");
+        assert_eq!(s.len(), 0);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 10);
+
+        assert_eq!(&*s, "");
+        assert_eq!(s.len(), 0);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 10);
+
+        s.push_str("a");
+        assert_eq!(&*s, "a");
+        assert_eq!(s.len(), 1);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 9);
+
+        assert_eq!(s.push('é'), Ok(()));
+        assert_eq!(&*s, "aé");
+        assert_eq!(s.len(), 3);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 7);
+
+        assert_eq!(s.push_partial_str("~~~"), Ok(()));
+        assert_eq!(&*s, "aé~~~");
+        assert_eq!(s.len(), 6);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 4);
+
+        assert_eq!(s.push_partial_str("hello"), Err(4));
+        assert_eq!(&*s, "aé~~~hell");
+        assert_eq!(s.len(), 10);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 0);
+
+        s.truncate(6);
+        assert_eq!(&*s, "aé~~~");
+        assert_eq!(s.len(), 6);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 4);
+
+        assert_eq!(s.push_partial_str("_🌠"), Err(1));
+        assert_eq!(&*s, "aé~~~_");
+        assert_eq!(s.len(), 7);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 3);
+
+        assert_eq!(s.push('🌠'), Err(()));
+        assert_eq!(&*s, "aé~~~_");
+        assert_eq!(s.len(), 7);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 3);
 
 
-    let buffer: [u8; 10] = s.clone().into_buffer();
-    assert_eq!(&buffer, b"a\xC3\xA9~~~_ell");
-    assert_eq!(format!("{}", s), "aé~~~_");
-    assert_eq!(format!("{:?}", s), r#""aé~~~_""#);
+        let buffer: [u8; 10] = s.clone().into_buffer();
+        assert_eq!(&buffer, b"a\xC3\xA9~~~_ell");
+        assert_eq!(format!("{}", s), "aé~~~_");
+        assert_eq!(format!("{:?}", s), r#""aé~~~_""#);
 
-    assert_eq!(s.push_partial_str("ô!?"), Err(3));
-    assert_eq!(&*s, "aé~~~_ô!");
-    assert_eq!(s.len(), 10);
-    assert_eq!(s.capacity(), 10);
-    assert_eq!(s.extra_capacity(), 0);
+        assert_eq!(s.push_partial_str("ô!?"), Err(3));
+        assert_eq!(&*s, "aé~~~_ô!");
+        assert_eq!(s.len(), 10);
+        assert_eq!(s.capacity(), 10);
+        assert_eq!(s.extra_capacity(), 0);
+    }
+
+    #[cfg(feature="use_serde")]
+    #[test]
+    fn test_serde() {
+        let mut s = StringWrapper::new([0u8; 10]);
+        s.push_str("foobar");
+        let json = serde_json::to_string(&s).unwrap();
+        assert_eq!(json, "\"foobar\"");
+        let s2 = serde_json::from_str(&json).unwrap();
+        assert_eq!(s, s2);
+    }
 }

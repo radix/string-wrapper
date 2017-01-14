@@ -1,11 +1,14 @@
+[![Build Status](https://api.travis-ci.org/radix/string-wrapper.svg?branch=master)](https://travis-ci.org/radix/string-wrapper) [![Latest Version](https://img.shields.io/crates/v/string-wrapper.svg)](https://crates.io/crates/string-wrapper)
+
 # string_wrapper
 
 string_wrapper is a crate which provides StringWrapper, which is a usually*
-stack-allocated UTF-8 string type. This has a few consequences:
+stack-allocated UTF-8 string type. Features:
 
-- Strings must be fixed-length so the size of the type can be known at
-  compile-time.
-- It can implement Copy, unlike the standard heap-allocated String type.
+- Array-backed StringWrappers can be entirely stored on the stack
+- The Copy trait can be implemented, unlike for standard Strings
+- Serde Serialization and Deserialization traits are implemented to act exactly
+  like String
 
 # Documentation
 
@@ -21,6 +24,14 @@ soon).
 string-wrapper = "0.1.6"
 ```
 
+If you want to use serde support, you have to enable the feature and use Rust
+1.15 or higher.
+
+```toml
+[dependencies]
+string-wrapper = {version = "0.1.6", features = ["use_serde"]}
+```
+
 Make sure to use `extern crate` in your "crate root" module (usually either
 `lib.rs` or `main.rs`)
 
@@ -34,9 +45,7 @@ Finally, to actually use the StringWrapper type:
 use string_wrapper::StringWrapper;
 
 fn foo() {
-  // s is of type StringWrapper<[u8; 32]>
-  let mut s = StringWrapper::new([0u8; 32]);
-  s.push_str("foo");
+  let s: StringWrapper<[u8; 32]> = StringWrapper::from_str("foo");;
 
   // a StringWrapper can be converted back to a String with `to_string`:
   println!("{}", s.to_string());
