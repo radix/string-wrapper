@@ -210,31 +210,25 @@ impl<T: OwnedBuffer> StringWrapper<T> {
     /// ```
     /// use string_wrapper::StringWrapper;
     ///
-    /// let sw: Result<StringWrapper<[u8; 3]>, _> = StringWrapper::from_str_safe("foo");
+    /// let sw: Option<StringWrapper<[u8; 3]>> = StringWrapper::from_str_safe("foo");
     /// assert_eq!(format!("{}", sw.unwrap()), "foo");
     /// ```
     ///
     /// ```
-    /// use string_wrapper::{StringWrapper, StringWrapperError};
+    /// use string_wrapper::StringWrapper;
     ///
-    /// let sw: Result<StringWrapper<[u8; 3]> ,_> = StringWrapper::from_str_safe("foobar");
-    /// assert_eq!(sw, Err(StringWrapperError::StringTooLong(6)));
+    /// let sw: Option<StringWrapper<[u8; 3]>> = StringWrapper::from_str_safe("foobar");
+    /// assert_eq!(sw, None);
     /// ```
-    pub fn from_str_safe(s: &str) -> Result<StringWrapper<T>, StringWrapperError> {
+    pub fn from_str_safe(s: &str) -> Option<StringWrapper<T>> {
         let buffer = T::new();
         let mut sw = StringWrapper::new(buffer);
-        sw.push_partial_str(s).or_else(|_| Err(StringWrapperError::StringTooLong(s.len())))?;
-        Ok(sw)
+        match sw.push_partial_str(s) {
+            Ok(_) => Some(sw),
+            Err(_) => None,
+        }
     }
 }
-
-/// Errors that can be returned from StringWrapper operations.
-#[derive(Eq, PartialEq, Debug)]
-pub enum StringWrapperError {
-    /// Returned when a &str is too long to fit into a buffer.
-    StringTooLong(usize),
-}
-
 
 fn starts_well_formed_utf8_sequence(byte: u8) -> bool {
     // ASCII byte or "leading" byte
