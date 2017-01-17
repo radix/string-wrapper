@@ -1,3 +1,10 @@
+# Version 0.1.7 (unreleased)
+
+## `from_str_safe` method
+
+A version of `from_str` that returns a `Result<StringWrapper<T>,
+StringWrapperError>`, so we can avoid panics when constructing StringWrappers.
+
 # Version 0.1.6 (2017-01-13)
 
 ## `from_str` method

@@ -195,14 +195,46 @@ impl<T: OwnedBuffer> StringWrapper<T> {
     /// let sw: StringWrapper<[u8; 32]> = StringWrapper::from_str("hello, world");
     /// assert_eq!(format!("{}", sw), "hello, world");
     /// ```
-
     pub fn from_str(s: &str) -> StringWrapper<T> {
         let buffer = T::new();
         let mut sw = StringWrapper::new(buffer);
         sw.push_str(s);
         sw
     }
+
+    /// Safely construct a new StringWrapper from a &str. Unlike `from_str`, this method doesn't
+    /// panic when the &str is too big to fit into the buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use string_wrapper::StringWrapper;
+    ///
+    /// let sw: Result<StringWrapper<[u8; 3]>, _> = StringWrapper::from_str_safe("foo");
+    /// assert_eq!(format!("{}", sw.unwrap()), "foo");
+    /// ```
+    ///
+    /// ```
+    /// use string_wrapper::{StringWrapper, StringWrapperError};
+    ///
+    /// let sw: Result<StringWrapper<[u8; 3]> ,_> = StringWrapper::from_str_safe("foobar");
+    /// assert_eq!(sw, Err(StringWrapperError::StringTooLong(6)));
+    /// ```
+    pub fn from_str_safe(s: &str) -> Result<StringWrapper<T>, StringWrapperError> {
+        let buffer = T::new();
+        let mut sw = StringWrapper::new(buffer);
+        sw.push_partial_str(s).or_else(|_| Err(StringWrapperError::StringTooLong(s.len())))?;
+        Ok(sw)
+    }
 }
+
+/// Errors that can be returned from StringWrapper operations.
+#[derive(Eq, PartialEq, Debug)]
+pub enum StringWrapperError {
+    /// Returned when a &str is too long to fit into a buffer.
+    StringTooLong(usize),
+}
+
 
 fn starts_well_formed_utf8_sequence(byte: u8) -> bool {
     // ASCII byte or "leading" byte
