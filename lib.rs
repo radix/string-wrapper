@@ -1,6 +1,12 @@
 //! provides `StringWrapper`, most useful for stack-based strings.
-
 #![deny(missing_docs)]
+
+#[cfg(feature="use_serde")]
+#[macro_use]
+extern crate serde_derive;
+#[cfg(feature="use_serde")]
+extern crate serde;
+
 use std::borrow;
 use std::fmt;
 use std::io::Write;
@@ -12,10 +18,7 @@ use std::cmp;
 use std::hash;
 
 #[cfg(feature="use_serde")]
-#[macro_use]
-extern crate serde_derive;
-#[cfg(feature="use_serde")]
-extern crate serde;
+use serde::Error;
 
 /// Like `String`, but with a fixed capacity and a generic backing bytes storage.
 ///
@@ -339,7 +342,7 @@ impl<T: Buffer> serde::Serialize for StringWrapper<T> {
 impl<T: OwnedBuffer> serde::Deserialize for StringWrapper<T> {
     fn deserialize<D: serde::Deserializer>(deserializer: &mut D) -> Result<Self, D::Error> {
         let s: String = serde::Deserialize::deserialize(deserializer)?;
-        let sb = StringWrapper::from_str(&s);
+        let sb = StringWrapper::from_str_safe(&s).ok_or(D::Error::invalid_length(s.len()))?;
         Ok(sb)
     }
 }
@@ -593,6 +596,17 @@ mod tests {
         assert_eq!(json, "\"foobar\"");
         let s2 = serde_json::from_str(&json).unwrap();
         assert_eq!(s, s2);
+    }
+
+    #[cfg(feature="use_serde")]
+    #[test]
+    fn deserialize_too_long() {
+        let json = "\"12345\"";
+        match serde_json::from_str::<StringWrapper<[u8; 3]>>(&json) {
+            Err(serde_json::Error::Syntax(serde_json::error::ErrorCode::InvalidLength(5), _, _)) => {},
+            Err(x) => panic!("Expected Syntax error, got {:?}", x),
+            Ok(x) => panic!("Expected error, got success: {:?}", x)
+        }
     }
 
     #[test]
