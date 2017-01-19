@@ -1,9 +1,12 @@
-# Version 0.1.7 (unreleased)
+# Version 0.1.7 (2017-01-19)
 
 ## `from_str_safe` method
 
 A version of `from_str` that returns a `Result<StringWrapper<T>,
 StringWrapperError>`, so we can avoid panics when constructing StringWrappers.
+
+The Serde `Deserialize` implementation now uses `from_str_safe` so panics will
+no longer occur for serialized input that is too long.
 
 # Version 0.1.6 (2017-01-13)
 
