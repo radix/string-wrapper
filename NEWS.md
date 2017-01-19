@@ -2,8 +2,8 @@
 
 ## `from_str_safe` method
 
-A version of `from_str` that returns a `Result<StringWrapper<T>,
-StringWrapperError>`, so we can avoid panics when constructing StringWrappers.
+A version of `from_str` that returns a `Option<StringWrapper<T>>`,
+so we can avoid panics when constructing StringWrappers.
 
 The Serde `Deserialize` implementation now uses `from_str_safe` so panics will
 no longer occur for serialized input that is too long.
