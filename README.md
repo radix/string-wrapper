@@ -20,7 +20,7 @@ First, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-string-wrapper = "0.1.6"
+string-wrapper = "0.1.7"
 ```
 
 If you want to use [Serde](https://serde.rs/) support, you have to enable the
@@ -44,7 +44,8 @@ Finally, to actually use the StringWrapper type:
 use string_wrapper::StringWrapper;
 
 fn foo() {
-  let s: StringWrapper<[u8; 32]> = StringWrapper::from_str("foo");;
+  // `from_str` may panic; use `from_str_safe` if you're using arbitrary input
+  let s: StringWrapper<[u8; 32]> = StringWrapper::from_str("foo");
 
   // a StringWrapper can be converted back to a String with `to_string`:
   println!("{}", s.to_string());
@@ -77,7 +78,7 @@ String since it's more flexible and convenient.
 
 Note that this is not what is typically called "SSO String", which is a
 dynamically-sized string that is either stored directly on the stack (if it's
-small) or on the heap (if it's long). Such a string would not be able to
+small) or on the heap (if it's large). Such a string would not be able to
 implement the Copy trait.
 
 # Credits
