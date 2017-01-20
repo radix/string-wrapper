@@ -8,6 +8,10 @@ documentation = "https://docs.rs/string-wrapper"
 description = "A possibly-stack-allocated string with generic bytes storage"
 readme = "README.md"
 keywords = ["string", "data-structures"]
+categories = ["data-structures"]
+
+[badges]
+travis-ci = { repository = "radix/string-wrapper" }
 
 [lib]
 path = "lib.rs"
