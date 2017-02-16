@@ -1,6 +1,6 @@
 [package]
 name = "string-wrapper"
-version = "0.2"
+version = "0.2.0"
 authors = ["Christopher Armstrong <radix@twistedmatrix.com>"]
 license = "MIT / Apache-2.0"
 repository = "https://github.com/radix/string-wrapper"
