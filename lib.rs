@@ -448,7 +448,6 @@ mod tests {
     use std;
     use std::cmp;
     use std::hash;
-    use std::error::Error;
 
     #[cfg(feature="use_serde")]
     extern crate serde_json;
