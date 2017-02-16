@@ -18,7 +18,7 @@ use std::cmp;
 use std::hash;
 
 #[cfg(feature="use_serde")]
-use serde::Error;
+use serde::de::Error;
 
 /// Like `String`, but with a fixed capacity and a generic backing bytes storage.
 ///
@@ -333,17 +333,32 @@ impl<T: Buffer> Ord for StringWrapper<T> {
 
 #[cfg(feature="use_serde")]
 impl<T: Buffer> serde::Serialize for StringWrapper<T> {
-    fn serialize<S: serde::Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.to_string().serialize(serializer)
     }
 }
 
 #[cfg(feature="use_serde")]
 impl<T: OwnedBuffer> serde::Deserialize for StringWrapper<T> {
-    fn deserialize<D: serde::Deserializer>(deserializer: &mut D) -> Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer>(deserializer: D) -> Result<Self, D::Error> {
         let s: String = serde::Deserialize::deserialize(deserializer)?;
-        let sb = StringWrapper::from_str_safe(&s).ok_or(D::Error::invalid_length(s.len()))?;
+        let sb = StringWrapper::from_str_safe(&s).ok_or_else(|| {
+                let buff = T::new();
+                let msg: String = format!("string that can fit into {} bytes", buff.as_ref().len());
+                D::Error::invalid_length(s.len(), &StringExpected(msg))
+            })?;
         Ok(sb)
+    }
+}
+
+// It seems silly that I can't just pass a String to invalid_length, but there's no implementation
+// of Expected for String, so...
+#[cfg(feature="use_serde")]
+struct StringExpected(String);
+#[cfg(feature="use_serde")]
+impl serde::de::Expected for StringExpected {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, formatter)
     }
 }
 
@@ -433,6 +448,7 @@ mod tests {
     use std;
     use std::cmp;
     use std::hash;
+    use std::error::Error;
 
     #[cfg(feature="use_serde")]
     extern crate serde_json;
@@ -603,9 +619,11 @@ mod tests {
     fn deserialize_too_long() {
         let json = "\"12345\"";
         match serde_json::from_str::<StringWrapper<[u8; 3]>>(&json) {
-            Err(serde_json::Error::Syntax(serde_json::error::ErrorCode::InvalidLength(5), _, _)) => {},
-            Err(x) => panic!("Expected Syntax error, got {:?}", x),
-            Ok(x) => panic!("Expected error, got success: {:?}", x)
+            Err(e) => {
+                assert_eq!(format!("{}", e),
+                           "invalid length 5, expected string that can fit into 3 bytes")
+            }
+            Ok(x) => panic!("Expected error, got success: {:?}", x),
         }
     }
 

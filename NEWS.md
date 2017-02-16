@@ -1,3 +1,13 @@
+# Version 0.2 (2017-02-15)
+
+## Serde 0.9 support
+
+Serde version 0.9 has incompatible changes to its serialization and deserialization APIs, and
+string-wrapper has been updated to those new versions.
+
+For users of string-wrapper who didn't have the `use_serde` feature enabled, there have been no
+changes in this version.
+
 # Version 0.1.7 (2017-01-19)
 
 ## `from_str_safe` method

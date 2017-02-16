@@ -20,7 +20,7 @@ First, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-string-wrapper = "0.1.7"
+string-wrapper = "0.2"
 ```
 
 If you want to use [Serde](https://serde.rs/) support, you have to enable the
