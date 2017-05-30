@@ -339,8 +339,8 @@ impl<T: Buffer> serde::Serialize for StringWrapper<T> {
 }
 
 #[cfg(feature="use_serde")]
-impl<T: OwnedBuffer> serde::Deserialize for StringWrapper<T> {
-    fn deserialize<D: serde::Deserializer>(deserializer: D) -> Result<Self, D::Error> {
+impl<'de, T: OwnedBuffer> serde::Deserialize<'de> for StringWrapper<T> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s: String = serde::Deserialize::deserialize(deserializer)?;
         let sb = StringWrapper::from_str_safe(&s).ok_or_else(|| {
                 let buff = T::new();

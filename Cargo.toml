@@ -1,6 +1,6 @@
 [package]
 name = "string-wrapper"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Christopher Armstrong <radix@twistedmatrix.com>"]
 license = "MIT / Apache-2.0"
 repository = "https://github.com/radix/string-wrapper"
@@ -20,8 +20,8 @@ path = "lib.rs"
 use_serde = ["serde", "serde_derive"]
 
 [dev-dependencies]
-serde_json = "0.9"
+serde_json = "1.0"
 
 [dependencies]
-serde = {version = "0.9", optional = true}
-serde_derive = {version = "0.9", optional = true}
+serde = {version = "1.0", optional = true}
+serde_derive = {version = "1.0", optional = true}
